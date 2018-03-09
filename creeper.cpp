@@ -11,6 +11,9 @@ const int NumVertices = 36; //(6 faces)(2 triangles/face)(3 vertices/triangle)
 point4 points[NumVertices];
 color4 colors[NumVertices];
 
+mat4 model, view, projection;
+GLuint uniModel, uniProjection, uniView;
+
 point4 vertices[8] = {
     point4( -0.5, -0.5,  0.5, 1.0 ),
     point4( -0.5,  0.5,  0.5, 1.0 ),
@@ -35,9 +38,19 @@ color4 vertex_colors[8] = {
 };
 
 const vec3 HEAD_SIZE = vec3(5, 5, 5);
-const vec3 BODY_SIZE = vec3(5, 10, 3.5);
-const vec3 FOOT_SIZE = vec3(5, 4, 3);
-const color4 BACKGROUND_COLOR = vec4(0.5, 0.5, 0.5, 1);
+const vec3 BODY_SIZE = vec3(5, 7, 3.5);
+const vec3 FOOT_SIZE = vec3(5, 3, 3);
+const color4 BACKGROUND_COLOR = vec4(1.0, 1.0, 1.0, 1);
+
+int index = 0;
+enum ViewMode {
+    FRONT = 0,
+    TOP = 1,
+    SIDE = 2,
+    NUM_VIEWS = 3
+};
+
+int view_mode = 0;
 
 enum Part {
     head,
@@ -46,12 +59,12 @@ enum Part {
 };
 
 void quad( int a, int b, int c, int d ) {
-    colors[Index] = vertex_colors[a]; points[Index] = vertices[a]; Index++;
-    colors[Index] = vertex_colors[a]; points[Index] = vertices[b]; Index++;
-    colors[Index] = vertex_colors[a]; points[Index] = vertices[c]; Index++;
-    colors[Index] = vertex_colors[a]; points[Index] = vertices[a]; Index++;
-    colors[Index] = vertex_colors[a]; points[Index] = vertices[c]; Index++;
-    colors[Index] = vertex_colors[a]; points[Index] = vertices[d]; Index++;
+    colors[index] = vertex_colors[a]; points[index] = vertices[a]; index++;
+    colors[index] = vertex_colors[a]; points[index] = vertices[b]; index++;
+    colors[index] = vertex_colors[a]; points[index] = vertices[c]; index++;
+    colors[index] = vertex_colors[a]; points[index] = vertices[a]; index++;
+    colors[index] = vertex_colors[a]; points[index] = vertices[c]; index++;
+    colors[index] = vertex_colors[a]; points[index] = vertices[d]; index++;
 }
 
 // generate a cube
@@ -107,46 +120,15 @@ void my_init( void ) {
 
 //----------------------------------------------------------------------------
 
-void mouse( int button, int state, int current_target_x, int y ) {
-
-    if ( button == GLUT_LEFT_BUTTON && state == GLUT_DOWN ) {
-	// Incrase the joint angle
-    }
-
-    if ( button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN ) {
-	// Decrase the joint angle
-    }
-
-}
-
 void onSpecialKeyPressed(int key, int current_target_x, int y) {
     switch(key) {
         case GLUT_KEY_LEFT:
-            Theta[Axis] += THETADELTA;
-            if ( Theta[Axis] > 360.0 ) { Theta[Axis] -= 360.0; }
             break;
         case GLUT_KEY_RIGHT:
-            Theta[Axis] -= THETADELTA;
-            if ( Theta[Axis] < 0.0 ) { Theta[Axis] += 360.0; }
             break;
     }
     glutPostRedisplay();
 }
-
-//----------------------------------------------------------------------------
-
-void menu( int option ) {
-    if ( option == QUIT ) {
-        exit( EXIT_SUCCESS );
-    } else if(option == SWITCH_VIEW) {
-        VIEW_MODE = 1 - VIEW_MODE;
-        glutPostRedisplay();
-    } else {
-        Axis = option;
-    }
-}
-
-//----------------------------------------------------------------------------
 
 void reshape( int width, int height ) {
     glViewport( 0, 0, width, height );
@@ -166,13 +148,21 @@ void reshape( int width, int height ) {
 	top /= aspect;
     }
 
-    mat4 projection = Ortho( left, right, bottom, top, zNear, zFar );
+    projection = Ortho( left, right, bottom, top, zNear, zFar );
     glUniformMatrix4fv( uniProjection, 1, GL_TRUE, projection );
 
-    model = mat4( 1.0 );  // An Identity matrix
+    view = mat4(1);
+    glUniformMatrix4fv(uniView, 1, GL_TRUE, view);
+
+    model = mat4(1.0);  // An Identity matrix
 }
 
-//----------------------------------------------------------------------------
+void switch_view() {
+    view_mode++;
+    if(view_mode >= NUM_VIEWS) {
+        view_mode = 0;
+    }
+}
 
 void keyboard( unsigned char key, int current_target_x, int y ) {
     switch( key ) {
@@ -180,11 +170,54 @@ void keyboard( unsigned char key, int current_target_x, int y ) {
 	case 'q': case 'Q':
 	    exit( EXIT_SUCCESS );
 	    break;
+    case 'c': case 'C':
+        switch_view();
+        break;
     }
+
+    glutPostRedisplay();
+}
+
+void draw_cube_instance(mat4 instance) {
+    glUniformMatrix4fv(uniModel, 1, GL_TRUE, model * instance);
+    glDrawArrays(GL_TRIANGLES, 0, NumVertices);
 }
 
 void display() {
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+    if(view_mode == TOP) {
+        view = LookAt(vec4(1, 2, 5, 1), vec4(1, 0, 5, 1), vec4(0, 0, -1, 0));
+    } else if(view_mode == FRONT) {
+        view = mat4(1);
+    } else {
+        view = RotateY(90);
+    }
+    glUniformMatrix4fv(uniView, 1, GL_TRUE, view); 
+
+    mat4 instance;
+
+    // back foot
+    instance = Scale(FOOT_SIZE);
+    model = Translate(0, FOOT_SIZE[1] / 2, -(BODY_SIZE[2] / 2 + FOOT_SIZE[2] / 2));
+    draw_cube_instance(instance);
+    
+    // front foot
+    // move front (z)
+    model = Translate(0, FOOT_SIZE[1] / 2, (BODY_SIZE[2] / 2 + FOOT_SIZE[2] / 2));
+    draw_cube_instance(instance);
+
+    // body, move up to the feet
+    model = Translate(0, FOOT_SIZE[1] + BODY_SIZE[1] / 2, 0);
+    instance = Scale(BODY_SIZE);
+    draw_cube_instance(instance);
+    
+    model *= Translate(0, HEAD_SIZE[1] / 2 + BODY_SIZE[1] / 2, 0);
+    instance = Scale(HEAD_SIZE);
+    draw_cube_instance(instance);
+
+
+    glutSwapBuffers();
 }
 
 int main( int argc, char **argv ) {
@@ -203,9 +236,6 @@ int main( int argc, char **argv ) {
     glutReshapeFunc( reshape );
     glutKeyboardFunc( keyboard );
     glutSpecialFunc(onSpecialKeyPressed);
-    glutMouseFunc( mouse );
-
-    glutCreateMenu( menu );
 
     glutMainLoop();
     return 0;
