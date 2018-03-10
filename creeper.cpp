@@ -9,7 +9,7 @@ typedef Angel::vec4 color4;
 const int NumVertices = 36; //(6 faces)(2 triangles/face)(3 vertices/triangle)
 
 point4 points[NumVertices];
-color4 colors[NumVertices];
+vec2 textures[NumVertices];
 
 mat4 model, view, projection;
 GLuint uniModel, uniProjection, uniView;
@@ -24,8 +24,45 @@ point4 vertices[8] = {
     point4(  0.5,  0.5, -0.5, 1.0 ),
     point4(  0.5, -0.5, -0.5, 1.0 )
 };
-
-// RGBA colors
+static const GLfloat g_uv_buffer_data[] = { 
+    0.000059f, 1.0f-0.000004f, 
+    0.000103f, 1.0f-0.336048f, 
+    0.335973f, 1.0f-0.335903f, 
+    1.000023f, 1.0f-0.000013f, 
+    0.667979f, 1.0f-0.335851f, 
+    0.999958f, 1.0f-0.336064f, 
+    0.667979f, 1.0f-0.335851f, 
+    0.336024f, 1.0f-0.671877f, 
+    0.667969f, 1.0f-0.671889f, 
+    1.000023f, 1.0f-0.000013f, 
+    0.668104f, 1.0f-0.000013f, 
+    0.667979f, 1.0f-0.335851f, 
+    0.000059f, 1.0f-0.000004f, 
+    0.335973f, 1.0f-0.335903f, 
+    0.336098f, 1.0f-0.000071f, 
+    0.667979f, 1.0f-0.335851f, 
+    0.335973f, 1.0f-0.335903f, 
+    0.336024f, 1.0f-0.671877f, 
+    1.000004f, 1.0f-0.671847f, 
+    0.999958f, 1.0f-0.336064f, 
+    0.667979f, 1.0f-0.335851f, 
+    0.668104f, 1.0f-0.000013f, 
+    0.335973f, 1.0f-0.335903f, 
+    0.667979f, 1.0f-0.335851f, 
+    0.335973f, 1.0f-0.335903f, 
+    0.668104f, 1.0f-0.000013f, 
+    0.336098f, 1.0f-0.000071f, 
+    0.000103f, 1.0f-0.336048f, 
+    0.000004f, 1.0f-0.671870f, 
+    0.336024f, 1.0f-0.671877f, 
+    0.000103f, 1.0f-0.336048f, 
+    0.336024f, 1.0f-0.671877f, 
+    0.335973f, 1.0f-0.335903f, 
+    0.667969f, 1.0f-0.671889f, 
+    1.000004f, 1.0f-0.671847f, 
+    0.667979f, 1.0f-0.335851f
+};
+// RGBA textures
 color4 vertex_colors[8] = {
     color4( 0.0, 0.0, 0.0, 1.0 ),  // black
     color4( 0.0, 0.0, 0.0, 1.0 ),  // black
@@ -37,10 +74,21 @@ color4 vertex_colors[8] = {
     color4( 0.0, 0.0, 0.0, 1.0 )   // black
 };
 
+vec2 UV_positions_head[8] = {
+    vec2(0.25, 2.0 / 3),
+    vec2(0.50, 2.0 / 3),
+    vec2(0.50, 1.0 / 3),
+    vec2(0.25, 1.0 / 3),
+    vec2(0.00, 2.0 / 3),
+    vec2(0.75, 2.0 / 3),
+    vec2(0.75, 1.0 / 3),
+    vec2(0.00, 1.0 / 3),
+};
+
 const vec3 HEAD_SIZE = vec3(5, 5, 5);
 const vec3 BODY_SIZE = vec3(5, 7, 3.5);
 const vec3 FOOT_SIZE = vec3(5, 3, 3);
-const color4 BACKGROUND_COLOR = vec4(1.0, 1.0, 1.0, 1);
+const color4 BACKGROUND_COLOR = vec4(0.5, 0.5, 0.5, 1);
 
 int index = 0;
 enum ViewMode {
@@ -50,21 +98,20 @@ enum ViewMode {
     NUM_VIEWS = 3
 };
 
+char* TEXTURE_FILEPATH = "src/creeper_texture.bmp";
+
 int view_mode = 0;
 
-enum Part {
-    head,
-    body,
-    foot,
-};
+void deleteBMPData(unsigned char* data);
+unsigned char* loadBMPData(const char *imagepath, unsigned int& width, unsigned int& height);
 
-void quad( int a, int b, int c, int d ) {
-    colors[index] = vertex_colors[a]; points[index] = vertices[a]; index++;
-    colors[index] = vertex_colors[a]; points[index] = vertices[b]; index++;
-    colors[index] = vertex_colors[a]; points[index] = vertices[c]; index++;
-    colors[index] = vertex_colors[a]; points[index] = vertices[a]; index++;
-    colors[index] = vertex_colors[a]; points[index] = vertices[c]; index++;
-    colors[index] = vertex_colors[a]; points[index] = vertices[d]; index++;
+void quad(int a, int b, int c, int d) {
+    textures[index] = UV_positions_head[a]; points[index] = vertices[a]; index++;
+    textures[index] = UV_positions_head[a]; points[index] = vertices[b]; index++;
+    textures[index] = UV_positions_head[a]; points[index] = vertices[c]; index++;
+    textures[index] = UV_positions_head[a]; points[index] = vertices[a]; index++;
+    textures[index] = UV_positions_head[a]; points[index] = vertices[c]; index++;
+    textures[index] = UV_positions_head[a]; points[index] = vertices[d]; index++;
 }
 
 // generate a cube
@@ -77,25 +124,28 @@ void colorcube() {
     quad( 5, 4, 0, 1 );
 }
 
+
 void my_init( void ) {
     colorcube();
     
     // Create a vertex array object
     GLuint vao;
-    glGenVertexArraysAPPLE( 1, &vao );
-    glBindVertexArrayAPPLE( vao );
+    glGenVertexArrays( 1, &vao );
+    glBindVertexArray( vao );
 
-    // Create and initialize a buffer object
-    GLuint buffer;
-    glGenBuffers( 1, &buffer );
-    glBindBuffer( GL_ARRAY_BUFFER, buffer );
-    glBufferData( GL_ARRAY_BUFFER, sizeof(points) + sizeof(colors),
-		  NULL, GL_DYNAMIC_DRAW );
+    // Create and initialize a vbo object
+    GLuint vbo;
+    glGenBuffers( 1, &vbo );
+    glBindBuffer( GL_ARRAY_BUFFER, vbo );
+
+    // buffer data
+    glBufferData( GL_ARRAY_BUFFER, sizeof(points) + sizeof(textures),
+		  NULL, GL_STATIC_DRAW );
     glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof(points), points );
-    glBufferSubData( GL_ARRAY_BUFFER, sizeof(points), sizeof(colors), colors );
+    glBufferSubData( GL_ARRAY_BUFFER, sizeof(points), sizeof(textures), textures);
     
     // Load shaders and use the resulting shader program
-    GLuint program = InitShader( "vshader.glsl", "fshader.glsl" );
+    GLuint program = InitShader( "texturevshader.glsl", "texturefshader.glsl" );
     glUseProgram( program );
     
     GLuint vPosition = glGetAttribLocation( program, "vPosition" );
@@ -103,17 +153,39 @@ void my_init( void ) {
     glVertexAttribPointer( vPosition, 4, GL_FLOAT, GL_FALSE, 0,
 			   BUFFER_OFFSET(0) );
 
-    GLuint vColor = glGetAttribLocation( program, "vColor" );
-    glEnableVertexAttribArray( vColor );
-    glVertexAttribPointer( vColor, 4, GL_FLOAT, GL_FALSE, 0,
+    GLuint vTexture = glGetAttribLocation( program, "vTexPosition" );
+    glEnableVertexAttribArray( vTexture );
+    glVertexAttribPointer( vTexture, 2, GL_FLOAT, GL_FALSE, 0,
 			   BUFFER_OFFSET(sizeof(points)) );
 
     uniModel = glGetUniformLocation( program, "uniModel" );
     uniView = glGetUniformLocation(program, "uniView");
     uniProjection = glGetUniformLocation( program, "uniProjection" );
 
+    GLuint tex;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+
+    // GLuint TextureID  = glGetUniformLocation(program, "myTextureSampler");
+    // glActiveTexture(GL_TEXTURE0); 
+    // glBindTexture(GL_TEXTURE_2D, tex);
+    // glUniform1i(TextureID, 0);
+
+
+    unsigned width, height;
+    unsigned char *data = loadBMPData(TEXTURE_FILEPATH, width, height);
+    if(data == NULL) {
+        cerr << "Error Loading BMP file!\n";
+        return;
+    }
+    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, data);
+
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    delete[] data;
+ 
     glEnable( GL_DEPTH );
-    glPolygonMode( GL_FRONT_AND_BACK, GL_LINE);
+    // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE);
 
     glClearColor(BACKGROUND_COLOR[0], BACKGROUND_COLOR[1], BACKGROUND_COLOR[2], BACKGROUND_COLOR[3]); 
 }
@@ -155,6 +227,7 @@ void reshape( int width, int height ) {
     glUniformMatrix4fv(uniView, 1, GL_TRUE, view);
 
     model = mat4(1.0);  // An Identity matrix
+    glUniformMatrix4fv(uniModel, 1, GL_TRUE, model);
 }
 
 void switch_view() {
@@ -225,6 +298,9 @@ int main( int argc, char **argv ) {
     // parse argv
     glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH );
     glutInitWindowSize( 512, 512 );
+    glutInitContextVersion( 3, 2 );
+    glutInitContextProfile( GLUT_CORE_PROFILE );
+
     glutCreateWindow( "creeper" );
 
     glewExperimental = GL_TRUE; 
@@ -239,4 +315,45 @@ int main( int argc, char **argv ) {
 
     glutMainLoop();
     return 0;
+}
+
+void deleteBMPData(unsigned char* data) {
+    delete[] data;
+}
+
+unsigned char* loadBMPData(const char *imagepath, unsigned int& width, unsigned int& height) {
+    // Data read from the header of the BMP file
+    unsigned char header[54]; // Each BMP file begins by a 54-bytes header
+    unsigned int dataPos;     // Position in the file where the actual data begins
+    unsigned int imageSize;   // = width*height*3
+    // Actual RGB data
+    unsigned char * data;
+    // Open the file
+    FILE * file = fopen(imagepath,"rb");
+    if (!file){printf("Image could not be opened\n"); return 0;}
+    if ( fread(header, 1, 54, file)!=54 ){ // If not 54 bytes read : problem
+        printf("Not a correct BMP file\n");
+        return NULL;
+    }
+    if ( header[0]!='B' || header[1]!='M' ){
+        printf("Not a correct BMP file\n");
+            return NULL;
+    }
+    // Read ints from the byte array
+    dataPos    = *(int*)&(header[0x0A]);
+    imageSize  = *(int*)&(header[0x22]);
+    width      = *(int*)&(header[0x12]);
+    height     = *(int*)&(header[0x16]);
+    // Some BMP files are misformatted, guess missing information
+    if (imageSize==0)    imageSize=width*height*3; // 3 : one byte for each Red, Green and Blue component
+    if (dataPos==0)      dataPos=54; // The BMP header is done that way
+    // Create a vbo
+    data = new unsigned char [imageSize];
+
+    // Read the actual data from the file into the vbo
+    fread(data,1,imageSize,file);
+
+    //Everything is in memory now, the file can be closed
+    fclose(file);
+    return data;
 }
