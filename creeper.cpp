@@ -1,4 +1,6 @@
 #include "include/Angel.h"
+#include <vector>
+#include <cstring>
 #include <iostream>
 
 using namespace std;
@@ -74,6 +76,10 @@ color4 vertex_colors[8] = {
     color4( 0.0, 0.0, 0.0, 1.0 )   // black
 };
 
+vector<vec3> creeper_vertices;
+vector<vec2> creeper_uvs;
+vector<vec3> creeper_normals;
+
 vec2 UV_positions_head[8] = {
     vec2(0.25, 2.0 / 3),
     vec2(0.50, 2.0 / 3),
@@ -90,7 +96,7 @@ const vec3 BODY_SIZE = vec3(5, 7, 3.5);
 const vec3 FOOT_SIZE = vec3(5, 3, 3);
 const color4 BACKGROUND_COLOR = vec4(0.5, 0.5, 0.5, 1);
 
-int index = 0;
+// int index = 0;
 enum ViewMode {
     FRONT = 0,
     TOP = 1,
@@ -99,34 +105,40 @@ enum ViewMode {
 };
 
 char* TEXTURE_FILEPATH = "src/creeper_texture.bmp";
+char* CREEPER_OBJ_FILEPATH = "src/creeper.obj";
 
 int view_mode = 0;
 
 void deleteBMPData(unsigned char* data);
 unsigned char* loadBMPData(const char *imagepath, unsigned int& width, unsigned int& height);
+bool loadOBJ( const char * path, 
+	vector<vec3>& out_vertices, 
+	vector<vec2>& out_uvs, 
+	vector<vec3>& out_normals
+);
 
-void quad(int a, int b, int c, int d) {
-    textures[index] = UV_positions_head[a]; points[index] = vertices[a]; index++;
-    textures[index] = UV_positions_head[a]; points[index] = vertices[b]; index++;
-    textures[index] = UV_positions_head[a]; points[index] = vertices[c]; index++;
-    textures[index] = UV_positions_head[a]; points[index] = vertices[a]; index++;
-    textures[index] = UV_positions_head[a]; points[index] = vertices[c]; index++;
-    textures[index] = UV_positions_head[a]; points[index] = vertices[d]; index++;
-}
+// void quad(int a, int b, int c, int d) {
+//     textures[index] = UV_positions_head[a]; points[index] = vertices[a]; index++;
+//     textures[index] = UV_positions_head[a]; points[index] = vertices[b]; index++;
+//     textures[index] = UV_positions_head[a]; points[index] = vertices[c]; index++;
+//     textures[index] = UV_positions_head[a]; points[index] = vertices[a]; index++;
+//     textures[index] = UV_positions_head[a]; points[index] = vertices[c]; index++;
+//     textures[index] = UV_positions_head[a]; points[index] = vertices[d]; index++;
+// }
 
-// generate a cube
-void colorcube() {
-    quad( 1, 0, 3, 2 );
-    quad( 2, 3, 7, 6 );
-    quad( 3, 0, 4, 7 );
-    quad( 6, 5, 1, 2 );
-    quad( 4, 5, 6, 7 );
-    quad( 5, 4, 0, 1 );
-}
+// // generate a cube
+// void colorcube() {
+//     quad( 1, 0, 3, 2 );
+//     quad( 2, 3, 7, 6 );
+//     quad( 3, 0, 4, 7 );
+//     quad( 6, 5, 1, 2 );
+//     quad( 4, 5, 6, 7 );
+//     quad( 5, 4, 0, 1 );
+// }
 
 
 void my_init( void ) {
-    colorcube();
+    // colorcube();
     
     // Create a vertex array object
     GLuint vao;
@@ -137,12 +149,15 @@ void my_init( void ) {
     GLuint vbo;
     glGenBuffers( 1, &vbo );
     glBindBuffer( GL_ARRAY_BUFFER, vbo );
+    
+    // load obj file
+    loadOBJ(CREEPER_OBJ_FILEPATH, creeper_vertices, creeper_uvs, creeper_normals);
 
     // buffer data
-    glBufferData( GL_ARRAY_BUFFER, sizeof(points) + sizeof(textures),
+    glBufferData( GL_ARRAY_BUFFER, sizeof(vec3) * creeper_vertices.size() + sizeof(vec2) * creeper_uvs.size(),
 		  NULL, GL_STATIC_DRAW );
-    glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof(points), points );
-    glBufferSubData( GL_ARRAY_BUFFER, sizeof(points), sizeof(textures), textures);
+    glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof(vec3) * creeper_vertices.size(), &creeper_vertices[0] );
+    glBufferSubData( GL_ARRAY_BUFFER, sizeof(vec3) * creeper_vertices.size(), sizeof(vec2) * creeper_uvs.size(), &creeper_uvs[0]);
     
     // Load shaders and use the resulting shader program
     GLuint program = InitShader( "texturevshader.glsl", "texturefshader.glsl" );
@@ -150,13 +165,13 @@ void my_init( void ) {
     
     GLuint vPosition = glGetAttribLocation( program, "vPosition" );
     glEnableVertexAttribArray( vPosition );
-    glVertexAttribPointer( vPosition, 4, GL_FLOAT, GL_FALSE, 0,
+    glVertexAttribPointer( vPosition, 3, GL_FLOAT, GL_FALSE, 0,
 			   BUFFER_OFFSET(0) );
 
     GLuint vTexture = glGetAttribLocation( program, "vTexPosition" );
     glEnableVertexAttribArray( vTexture );
     glVertexAttribPointer( vTexture, 2, GL_FLOAT, GL_FALSE, 0,
-			   BUFFER_OFFSET(sizeof(points)) );
+			   BUFFER_OFFSET(sizeof(vec3) * creeper_vertices.size()));
 
     uniModel = glGetUniformLocation( program, "uniModel" );
     uniView = glGetUniformLocation(program, "uniView");
@@ -184,8 +199,8 @@ void my_init( void ) {
 
     delete[] data;
  
-    glEnable( GL_DEPTH );
-    // glPolygonMode( GL_FRONT_AND_BACK, GL_LINE);
+    glEnable( GL_DEPTH_TEST );
+    glPolygonMode( GL_FRONT_AND_BACK, GL_FILL);
 
     glClearColor(BACKGROUND_COLOR[0], BACKGROUND_COLOR[1], BACKGROUND_COLOR[2], BACKGROUND_COLOR[3]); 
 }
@@ -262,32 +277,36 @@ void display() {
     if(view_mode == TOP) {
         view = LookAt(vec4(1, 2, 5, 1), vec4(1, 0, 5, 1), vec4(0, 0, -1, 0));
     } else if(view_mode == FRONT) {
-        view = mat4(1);
+        view = mat4(1.0);
     } else {
         view = RotateY(90);
     }
     glUniformMatrix4fv(uniView, 1, GL_TRUE, view); 
+    // use identity matrix as model
+    mat4 model = Scale(2);
+    glUniformMatrix4fv(uniModel, 1, GL_TRUE, model);
+    glDrawArrays(GL_TRIANGLES, 0, creeper_vertices.size());
 
-    mat4 instance;
+    // mat4 instance;
 
-    // back foot
-    instance = Scale(FOOT_SIZE);
-    model = Translate(0, FOOT_SIZE[1] / 2, -(BODY_SIZE[2] / 2 + FOOT_SIZE[2] / 2));
-    draw_cube_instance(instance);
+    // // back foot
+    // instance = Scale(FOOT_SIZE);
+    // model = Translate(0, FOOT_SIZE[1] / 2, -(BODY_SIZE[2] / 2 + FOOT_SIZE[2] / 2));
+    // draw_cube_instance(instance);
     
-    // front foot
-    // move front (z)
-    model = Translate(0, FOOT_SIZE[1] / 2, (BODY_SIZE[2] / 2 + FOOT_SIZE[2] / 2));
-    draw_cube_instance(instance);
+    // // front foot
+    // // move front (z)
+    // model = Translate(0, FOOT_SIZE[1] / 2, (BODY_SIZE[2] / 2 + FOOT_SIZE[2] / 2));
+    // draw_cube_instance(instance);
 
-    // body, move up to the feet
-    model = Translate(0, FOOT_SIZE[1] + BODY_SIZE[1] / 2, 0);
-    instance = Scale(BODY_SIZE);
-    draw_cube_instance(instance);
+    // // body, move up to the feet
+    // model = Translate(0, FOOT_SIZE[1] + BODY_SIZE[1] / 2, 0);
+    // instance = Scale(BODY_SIZE);
+    // draw_cube_instance(instance);
     
-    model *= Translate(0, HEAD_SIZE[1] / 2 + BODY_SIZE[1] / 2, 0);
-    instance = Scale(HEAD_SIZE);
-    draw_cube_instance(instance);
+    // model *= Translate(0, HEAD_SIZE[1] / 2 + BODY_SIZE[1] / 2, 0);
+    // instance = Scale(HEAD_SIZE);
+    // draw_cube_instance(instance);
 
 
     glutSwapBuffers();
@@ -356,4 +375,97 @@ unsigned char* loadBMPData(const char *imagepath, unsigned int& width, unsigned 
     //Everything is in memory now, the file can be closed
     fclose(file);
     return data;
+}
+
+bool loadOBJ(
+	const char * path, 
+	vector<vec3> & out_vertices, 
+	vector<vec2> & out_uvs,
+	vector<vec3> & out_normals
+){
+	printf("Loading OBJ file %s...\n", path);
+
+	vector<unsigned int> vertexIndices, uvIndices, normalIndices;
+	vector<vec3> temp_vertices; 
+	vector<vec2> temp_uvs;
+	vector<vec3> temp_normals;
+
+
+	FILE * file = fopen(path, "r");
+	if( file == NULL ){
+		printf("Impossible to open the file ! Are you in the right path ? See Tutorial 1 for details\n");
+		getchar();
+		return false;
+	}
+
+	while( 1 ){
+
+		char lineHeader[128];
+		// read the first word of the line
+		int res = fscanf(file, "%s", lineHeader);
+		if (res == EOF)
+			break; // EOF = End Of File. Quit the loop.
+
+		// else : parse lineHeader
+		
+		if ( strcmp( lineHeader, "v" ) == 0 ){
+			vec3 vertex;
+			fscanf(file, "%f %f %f\n", &vertex.x, &vertex.y, &vertex.z );
+			temp_vertices.push_back(vertex);
+		}else if ( strcmp( lineHeader, "vt" ) == 0 ){
+			vec2 uv;
+			fscanf(file, "%f %f\n", &uv.x, &uv.y );
+			// uv.y = -uv.y; // Invert V coordinate since we will only use DDS texture, which are inverted. Remove if you want to use TGA or BMP loaders.
+			temp_uvs.push_back(uv);
+		}else if ( strcmp( lineHeader, "vn" ) == 0 ){
+			vec3 normal;
+			fscanf(file, "%f %f %f\n", &normal.x, &normal.y, &normal.z );
+			temp_normals.push_back(normal);
+		}else if ( strcmp( lineHeader, "f" ) == 0 ){
+			string vertex1, vertex2, vertex3;
+			unsigned int vertexIndex[3], uvIndex[3], normalIndex[3];
+			int matches = fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d\n", &vertexIndex[0], &uvIndex[0], &normalIndex[0], &vertexIndex[1], &uvIndex[1], &normalIndex[1], &vertexIndex[2], &uvIndex[2], &normalIndex[2] );
+			if (matches != 9){
+				printf("File can't be read by our simple parser :-( Try exporting with other options\n");
+				fclose(file);
+				return false;
+			}
+			vertexIndices.push_back(vertexIndex[0]);
+			vertexIndices.push_back(vertexIndex[1]);
+			vertexIndices.push_back(vertexIndex[2]);
+			uvIndices    .push_back(uvIndex[0]);
+			uvIndices    .push_back(uvIndex[1]);
+			uvIndices    .push_back(uvIndex[2]);
+			normalIndices.push_back(normalIndex[0]);
+			normalIndices.push_back(normalIndex[1]);
+			normalIndices.push_back(normalIndex[2]);
+		}else{
+			// Probably a comment, eat up the rest of the line
+			char stupidBuffer[1000];
+			fgets(stupidBuffer, 1000, file);
+		}
+
+	}
+
+	// For each vertex of each triangle
+	for( unsigned int i=0; i<vertexIndices.size(); i++ ){
+
+		// Get the indices of its attributes
+		unsigned int vertexIndex = vertexIndices[i];
+		unsigned int uvIndex = uvIndices[i];
+		unsigned int normalIndex = normalIndices[i];
+		
+		// Get the attributes thanks to the index
+		vec3 vertex = temp_vertices[ vertexIndex-1 ];
+		vec2 uv = temp_uvs[ uvIndex-1 ];
+		vec3 normal = temp_normals[ normalIndex-1 ];
+		
+		// Put the attributes in buffers
+		out_vertices.push_back(vertex);
+		out_uvs     .push_back(uv);
+		out_normals .push_back(normal);
+	
+	}
+	fclose(file);
+	return true;
 }

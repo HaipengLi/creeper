@@ -2,3 +2,7 @@
 *.o
 depend
 creeper
+# blender files
+*.blend
+*.blend1
+*.mtl
