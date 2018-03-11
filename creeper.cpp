@@ -221,7 +221,7 @@ void reshape( int width, int height ) {
     glViewport( 0, 0, width, height );
 
     GLfloat  left = -10.0, right = 10.0;
-    GLfloat  bottom = -5.0, top = 15.0;
+    GLfloat  bottom = -10.0, top = 10.0;
     GLfloat  zNear = -10.0, zFar = 10.0;
 
     GLfloat aspect = GLfloat(width) / height;
@@ -275,11 +275,11 @@ void display() {
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     if(view_mode == TOP) {
-        view = LookAt(vec4(1, 2, 5, 1), vec4(1, 0, 5, 1), vec4(0, 0, -1, 0));
+        view = LookAt(vec4(-1, -.3, 1, 1), vec4(0, 0, 0, 1), vec4(0, 1, 0, 0));
     } else if(view_mode == FRONT) {
-        view = mat4(1.0);
+        view = LookAt(vec4(-1, 0.1, 1, 1), vec4(0, 0, 0, 1), vec4(0, 1, 0, 0));
     } else {
-        view = RotateY(90);
+        view = LookAt(vec4(1, 0, 1, 1), vec4(0, 0, 0, 1), vec4(1, 0, 0, 0));
     }
     glUniformMatrix4fv(uniView, 1, GL_TRUE, view); 
     // use identity matrix as model
