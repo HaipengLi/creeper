@@ -1,6 +1,6 @@
 # Creeper
 
-Model a Creeper from Minecraft game using OpenGL.
+Model & render a static Creeper from Minecraft game using OpenGL.
 
 ## Preview
 
