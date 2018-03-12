@@ -101,7 +101,7 @@ void init_object(GLuint &vao, GLuint &vbo, GLuint &tex, GLuint program,
 void my_init(void) {
     // Create a vertex array object
 
-    GLuint program = InitShader( "texturevshader.glsl", "texturefshader.glsl" );
+    GLuint program = InitShader( "vshader.glsl", "fshader.glsl" );
 
     init_object(creeper_vao, creeper_vbo, creeper_tex, program, 
                 CREEPER_OBJ_FILEPATH, CREEPER_TEX_FILEPATH,
