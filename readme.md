@@ -15,7 +15,7 @@ Model a Creeper from Minecraft game using OpenGL.
 Use `make` command to compile.
 `make clean` & `make clean_object` to clean.
 
-##run
+## run
 ```shell
 $ ./creeper
 ```
