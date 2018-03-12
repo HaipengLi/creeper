@@ -9,11 +9,14 @@ mat4 model, view, projection;
 GLuint uniModel, uniProjection, uniView, uniLightPosition;
 
 
-vector<vec3> creeper_vertices;
-vector<vec2> creeper_uvs;
-vector<vec3> creeper_normals;
+vector<vec3> creeper_vertices, grass_vertices;
+vector<vec2> creeper_uvs, grass_uvs;
+vector<vec3> creeper_normals, grass_normals;
 
-const vec4 BACKGROUND_COLOR = vec4(0.5, 0.5, 0.5, 1);
+GLuint creeper_vao, creeper_vbo, creeper_tex;
+GLuint grass_vao, grass_vbo, grass_tex;
+
+const vec4 BACKGROUND_COLOR = vec4(0.1, 0.1, 0.1, 1.0);
 const vec3 LIGHT_POSITION = vec3(-2, 0, 8);
 
 // int index = 0;
@@ -24,7 +27,9 @@ enum ViewMode {
     NUM_VIEWS = 3
 };
 
-char* TEXTURE_FILEPATH = "src/creeper_texture.bmp";
+char* GRASS_TEX_FILEPATH = "src/grass_texture.bmp";
+char* GRASS_OBJ_FILEPATH = "src/grass.obj";
+char* CREEPER_TEX_FILEPATH = "src/creeper_texture.bmp";
 char* CREEPER_OBJ_FILEPATH = "src/creeper.obj";
 
 int view_mode = 0;
@@ -38,33 +43,37 @@ bool loadOBJ( const char * path,
 );
 
 
-void my_init( void ) {
-    // Create a vertex array object
-    GLuint vao;
+void switch_object(GLuint vao, GLuint vbo, GLuint tex) {
+    glBindVertexArray( vao );
+    glBindBuffer( GL_ARRAY_BUFFER, vbo );
+    glBindTexture(GL_TEXTURE_2D, tex);
+}
+
+void init_object(GLuint &vao, GLuint &vbo, GLuint &tex, GLuint program,
+                char* obj_filepath, char* tex_filepath,
+                vector<vec3> &vertices, vector<vec2> &uvs, vector<vec3> &normals) {
     glGenVertexArrays( 1, &vao );
     glBindVertexArray( vao );
 
     // Create and initialize a vbo object
-    GLuint vbo;
     glGenBuffers( 1, &vbo );
     glBindBuffer( GL_ARRAY_BUFFER, vbo );
     
     // load obj file
-    loadOBJ(CREEPER_OBJ_FILEPATH, creeper_vertices, creeper_uvs, creeper_normals);
+    loadOBJ(obj_filepath, vertices, uvs, normals);
 
-    int vertices_size = sizeof(vec3) * creeper_vertices.size();
-    int uvs_size = sizeof(vec2) * creeper_uvs.size();
-    int normals_size = sizeof(vec3) * creeper_normals.size();
+    int vertices_size = sizeof(vec3) * vertices.size();
+    int uvs_size = sizeof(vec2) * uvs.size();
+    int normals_size = sizeof(vec3) * normals.size();
 
     // buffer data
     glBufferData( GL_ARRAY_BUFFER, vertices_size + uvs_size + normals_size,
 		  NULL, GL_STATIC_DRAW );
-    glBufferSubData( GL_ARRAY_BUFFER, 0, vertices_size, &creeper_vertices[0] );
-    glBufferSubData( GL_ARRAY_BUFFER, vertices_size, uvs_size, &creeper_uvs[0]);
-    glBufferSubData( GL_ARRAY_BUFFER, vertices_size + uvs_size, normals_size, &creeper_normals[0]);
+    glBufferSubData( GL_ARRAY_BUFFER, 0, vertices_size, &vertices[0] );
+    glBufferSubData( GL_ARRAY_BUFFER, vertices_size, uvs_size, &uvs[0]);
+    glBufferSubData( GL_ARRAY_BUFFER, vertices_size + uvs_size, normals_size, &normals[0]);
     
     // Load shaders and use the resulting shader program
-    GLuint program = InitShader( "texturevshader.glsl", "texturefshader.glsl" );
     glUseProgram( program );
     
     GLuint vPosition = glGetAttribLocation( program, "vPositionModelSpace" );
@@ -82,20 +91,12 @@ void my_init( void ) {
     glVertexAttribPointer( vNormal, 3, GL_FLOAT, GL_FALSE, 0,
 			   BUFFER_OFFSET(vertices_size + uvs_size));
 
-    uniModel = glGetUniformLocation( program, "uniModel" );
-    uniView = glGetUniformLocation(program, "uniView");
-    uniProjection = glGetUniformLocation( program, "uniProjection" );
-    uniLightPosition = glGetUniformLocation(program, "lightPositionWorldSpace");
-    glUniform3f(uniLightPosition, LIGHT_POSITION[0], LIGHT_POSITION[1], LIGHT_POSITION[2]);
-
-
-    GLuint tex;
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
 
 
     unsigned width, height;
-    unsigned char *data = loadBMPData(TEXTURE_FILEPATH, width, height);
+    unsigned char *data = loadBMPData(tex_filepath, width, height);
     if(data == NULL) {
         cerr << "Error Loading BMP file!\n";
         return;
@@ -105,6 +106,26 @@ void my_init( void ) {
     glGenerateMipmap(GL_TEXTURE_2D);
 
     delete[] data;
+}
+
+void my_init(void) {
+    // Create a vertex array object
+
+    GLuint program = InitShader( "texturevshader.glsl", "texturefshader.glsl" );
+
+    init_object(creeper_vao, creeper_vbo, creeper_tex, program, 
+                CREEPER_OBJ_FILEPATH, CREEPER_TEX_FILEPATH,
+                creeper_vertices, creeper_uvs, creeper_normals);
+
+    init_object(grass_vao, grass_vbo, grass_tex, program, 
+                GRASS_OBJ_FILEPATH, GRASS_TEX_FILEPATH,
+                grass_vertices, grass_uvs, grass_normals);
+
+    uniModel = glGetUniformLocation(program, "uniModel" );
+    uniView = glGetUniformLocation(program, "uniView");
+    uniProjection = glGetUniformLocation( program, "uniProjection" );
+    uniLightPosition = glGetUniformLocation(program, "lightPositionWorldSpace");
+    glUniform3f(uniLightPosition, LIGHT_POSITION[0], LIGHT_POSITION[1], LIGHT_POSITION[2]);
  
     glEnable( GL_DEPTH_TEST );
     glPolygonMode( GL_FRONT_AND_BACK, GL_FILL);
@@ -117,7 +138,7 @@ void reshape( int width, int height ) {
 
     GLfloat  left = -10.0, right = 10.0;
     GLfloat  bottom = -10.0, top = 10.0;
-    GLfloat  zNear = -10.0, zFar = 10.0;
+    GLfloat  zNear = -10.0, zFar = 20.0;
 
     GLfloat aspect = GLfloat(width) / height;
 
@@ -161,21 +182,40 @@ void keyboard( unsigned char key, int current_target_x, int y ) {
     glutPostRedisplay();
 }
 
+void draw_grass() {
+
+}
+
 void display() {
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
     if(view_mode == TOP) {
-        view = LookAt(vec4(-1, -.3, 1, 1), vec4(0, 0, 0, 1), vec4(0, 1, 0, 0));
+        view = LookAt(vec4(-2.5, 1, 3, 1), vec4(0, 0, 0, 1), vec4(0, 1, 0, 0));
     } else if(view_mode == FRONT) {
-        view = LookAt(vec4(-1, 0.1, 1, 1), vec4(0, 0, 0, 1), vec4(0, 1, 0, 0));
+        view = LookAt(vec4(-3, 0.6, 3, 1), vec4(0, 0, 0, 1), vec4(0, 1, 0, 0));
     } else {
         view = LookAt(vec4(1, 0, 1, 1), vec4(0, 0, 0, 1), vec4(1, 0, 0, 0));
     }
     glUniformMatrix4fv(uniView, 1, GL_TRUE, view); 
     // use identity matrix as model
-    mat4 model = Scale(2);
+    mat4 model;
+
+    model = Scale(2);
     glUniformMatrix4fv(uniModel, 1, GL_TRUE, model);
+
+    switch_object(creeper_vao, creeper_vbo, creeper_tex);
     glDrawArrays(GL_TRIANGLES, 0, creeper_vertices.size());
+
+    switch_object(grass_vao, grass_vbo, grass_tex);
+
+    for(int i = 0; i < 5; i++) {
+        model = Scale(2) * Translate(0, -4.2, 0) * Translate(5 - 2 * i, 0, -4);
+        for(int j = 0; j < 4; j++) {
+            model *= Translate(0, 0, 2);
+            glUniformMatrix4fv(uniModel, 1, GL_TRUE, model);
+            glDrawArrays(GL_TRIANGLES, 0, grass_vertices.size());
+        }
+    }
 
     glutSwapBuffers();
 }
