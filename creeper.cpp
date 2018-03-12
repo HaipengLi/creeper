@@ -5,96 +5,15 @@
 
 using namespace std;
 
-typedef Angel::vec4 point4;
-typedef Angel::vec4 color4;
-
-const int NumVertices = 36; //(6 faces)(2 triangles/face)(3 vertices/triangle)
-
-point4 points[NumVertices];
-vec2 textures[NumVertices];
-
 mat4 model, view, projection;
 GLuint uniModel, uniProjection, uniView;
 
-point4 vertices[8] = {
-    point4( -0.5, -0.5,  0.5, 1.0 ),
-    point4( -0.5,  0.5,  0.5, 1.0 ),
-    point4(  0.5,  0.5,  0.5, 1.0 ),
-    point4(  0.5, -0.5,  0.5, 1.0 ),
-    point4( -0.5, -0.5, -0.5, 1.0 ),
-    point4( -0.5,  0.5, -0.5, 1.0 ),
-    point4(  0.5,  0.5, -0.5, 1.0 ),
-    point4(  0.5, -0.5, -0.5, 1.0 )
-};
-static const GLfloat g_uv_buffer_data[] = { 
-    0.000059f, 1.0f-0.000004f, 
-    0.000103f, 1.0f-0.336048f, 
-    0.335973f, 1.0f-0.335903f, 
-    1.000023f, 1.0f-0.000013f, 
-    0.667979f, 1.0f-0.335851f, 
-    0.999958f, 1.0f-0.336064f, 
-    0.667979f, 1.0f-0.335851f, 
-    0.336024f, 1.0f-0.671877f, 
-    0.667969f, 1.0f-0.671889f, 
-    1.000023f, 1.0f-0.000013f, 
-    0.668104f, 1.0f-0.000013f, 
-    0.667979f, 1.0f-0.335851f, 
-    0.000059f, 1.0f-0.000004f, 
-    0.335973f, 1.0f-0.335903f, 
-    0.336098f, 1.0f-0.000071f, 
-    0.667979f, 1.0f-0.335851f, 
-    0.335973f, 1.0f-0.335903f, 
-    0.336024f, 1.0f-0.671877f, 
-    1.000004f, 1.0f-0.671847f, 
-    0.999958f, 1.0f-0.336064f, 
-    0.667979f, 1.0f-0.335851f, 
-    0.668104f, 1.0f-0.000013f, 
-    0.335973f, 1.0f-0.335903f, 
-    0.667979f, 1.0f-0.335851f, 
-    0.335973f, 1.0f-0.335903f, 
-    0.668104f, 1.0f-0.000013f, 
-    0.336098f, 1.0f-0.000071f, 
-    0.000103f, 1.0f-0.336048f, 
-    0.000004f, 1.0f-0.671870f, 
-    0.336024f, 1.0f-0.671877f, 
-    0.000103f, 1.0f-0.336048f, 
-    0.336024f, 1.0f-0.671877f, 
-    0.335973f, 1.0f-0.335903f, 
-    0.667969f, 1.0f-0.671889f, 
-    1.000004f, 1.0f-0.671847f, 
-    0.667979f, 1.0f-0.335851f
-};
-// RGBA textures
-color4 vertex_colors[8] = {
-    color4( 0.0, 0.0, 0.0, 1.0 ),  // black
-    color4( 0.0, 0.0, 0.0, 1.0 ),  // black
-    color4( 0.0, 0.0, 0.0, 1.0 ),  // black
-    color4( 0.0, 0.0, 0.0, 1.0 ),  // black
-    color4( 0.0, 0.0, 0.0, 1.0 ),  // black
-    color4( 0.0, 0.0, 0.0, 1.0 ),  // black
-    color4( 0.0, 0.0, 0.0, 1.0 ),  // black
-    color4( 0.0, 0.0, 0.0, 1.0 )   // black
-};
 
 vector<vec3> creeper_vertices;
 vector<vec2> creeper_uvs;
 vector<vec3> creeper_normals;
 
-vec2 UV_positions_head[8] = {
-    vec2(0.25, 2.0 / 3),
-    vec2(0.50, 2.0 / 3),
-    vec2(0.50, 1.0 / 3),
-    vec2(0.25, 1.0 / 3),
-    vec2(0.00, 2.0 / 3),
-    vec2(0.75, 2.0 / 3),
-    vec2(0.75, 1.0 / 3),
-    vec2(0.00, 1.0 / 3),
-};
-
-const vec3 HEAD_SIZE = vec3(5, 5, 5);
-const vec3 BODY_SIZE = vec3(5, 7, 3.5);
-const vec3 FOOT_SIZE = vec3(5, 3, 3);
-const color4 BACKGROUND_COLOR = vec4(0.5, 0.5, 0.5, 1);
+const vec4 BACKGROUND_COLOR = vec4(0.5, 0.5, 0.5, 1);
 
 // int index = 0;
 enum ViewMode {
@@ -117,29 +36,8 @@ bool loadOBJ( const char * path,
 	vector<vec3>& out_normals
 );
 
-// void quad(int a, int b, int c, int d) {
-//     textures[index] = UV_positions_head[a]; points[index] = vertices[a]; index++;
-//     textures[index] = UV_positions_head[a]; points[index] = vertices[b]; index++;
-//     textures[index] = UV_positions_head[a]; points[index] = vertices[c]; index++;
-//     textures[index] = UV_positions_head[a]; points[index] = vertices[a]; index++;
-//     textures[index] = UV_positions_head[a]; points[index] = vertices[c]; index++;
-//     textures[index] = UV_positions_head[a]; points[index] = vertices[d]; index++;
-// }
-
-// // generate a cube
-// void colorcube() {
-//     quad( 1, 0, 3, 2 );
-//     quad( 2, 3, 7, 6 );
-//     quad( 3, 0, 4, 7 );
-//     quad( 6, 5, 1, 2 );
-//     quad( 4, 5, 6, 7 );
-//     quad( 5, 4, 0, 1 );
-// }
-
 
 void my_init( void ) {
-    // colorcube();
-    
     // Create a vertex array object
     GLuint vao;
     glGenVertexArrays( 1, &vao );
@@ -181,11 +79,6 @@ void my_init( void ) {
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
 
-    // GLuint TextureID  = glGetUniformLocation(program, "myTextureSampler");
-    // glActiveTexture(GL_TEXTURE0); 
-    // glBindTexture(GL_TEXTURE_2D, tex);
-    // glUniform1i(TextureID, 0);
-
 
     unsigned width, height;
     unsigned char *data = loadBMPData(TEXTURE_FILEPATH, width, height);
@@ -203,18 +96,6 @@ void my_init( void ) {
     glPolygonMode( GL_FRONT_AND_BACK, GL_FILL);
 
     glClearColor(BACKGROUND_COLOR[0], BACKGROUND_COLOR[1], BACKGROUND_COLOR[2], BACKGROUND_COLOR[3]); 
-}
-
-//----------------------------------------------------------------------------
-
-void onSpecialKeyPressed(int key, int current_target_x, int y) {
-    switch(key) {
-        case GLUT_KEY_LEFT:
-            break;
-        case GLUT_KEY_RIGHT:
-            break;
-    }
-    glutPostRedisplay();
 }
 
 void reshape( int width, int height ) {
@@ -266,11 +147,6 @@ void keyboard( unsigned char key, int current_target_x, int y ) {
     glutPostRedisplay();
 }
 
-void draw_cube_instance(mat4 instance) {
-    glUniformMatrix4fv(uniModel, 1, GL_TRUE, model * instance);
-    glDrawArrays(GL_TRIANGLES, 0, NumVertices);
-}
-
 void display() {
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
@@ -286,28 +162,6 @@ void display() {
     mat4 model = Scale(2);
     glUniformMatrix4fv(uniModel, 1, GL_TRUE, model);
     glDrawArrays(GL_TRIANGLES, 0, creeper_vertices.size());
-
-    // mat4 instance;
-
-    // // back foot
-    // instance = Scale(FOOT_SIZE);
-    // model = Translate(0, FOOT_SIZE[1] / 2, -(BODY_SIZE[2] / 2 + FOOT_SIZE[2] / 2));
-    // draw_cube_instance(instance);
-    
-    // // front foot
-    // // move front (z)
-    // model = Translate(0, FOOT_SIZE[1] / 2, (BODY_SIZE[2] / 2 + FOOT_SIZE[2] / 2));
-    // draw_cube_instance(instance);
-
-    // // body, move up to the feet
-    // model = Translate(0, FOOT_SIZE[1] + BODY_SIZE[1] / 2, 0);
-    // instance = Scale(BODY_SIZE);
-    // draw_cube_instance(instance);
-    
-    // model *= Translate(0, HEAD_SIZE[1] / 2 + BODY_SIZE[1] / 2, 0);
-    // instance = Scale(HEAD_SIZE);
-    // draw_cube_instance(instance);
-
 
     glutSwapBuffers();
 }
@@ -330,7 +184,6 @@ int main( int argc, char **argv ) {
     // triggered when window is reshaped
     glutReshapeFunc( reshape );
     glutKeyboardFunc( keyboard );
-    glutSpecialFunc(onSpecialKeyPressed);
 
     glutMainLoop();
     return 0;
