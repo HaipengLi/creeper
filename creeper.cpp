@@ -6,7 +6,7 @@
 using namespace std;
 
 mat4 model, view, projection;
-GLuint uniModel, uniProjection, uniView;
+GLuint uniModel, uniProjection, uniView, uniLightPosition;
 
 
 vector<vec3> creeper_vertices;
@@ -14,6 +14,7 @@ vector<vec2> creeper_uvs;
 vector<vec3> creeper_normals;
 
 const vec4 BACKGROUND_COLOR = vec4(0.5, 0.5, 0.5, 1);
+const vec3 LIGHT_POSITION = vec3(-2, 0, 8);
 
 // int index = 0;
 enum ViewMode {
@@ -51,17 +52,22 @@ void my_init( void ) {
     // load obj file
     loadOBJ(CREEPER_OBJ_FILEPATH, creeper_vertices, creeper_uvs, creeper_normals);
 
+    int vertices_size = sizeof(vec3) * creeper_vertices.size();
+    int uvs_size = sizeof(vec2) * creeper_uvs.size();
+    int normals_size = sizeof(vec3) * creeper_normals.size();
+
     // buffer data
-    glBufferData( GL_ARRAY_BUFFER, sizeof(vec3) * creeper_vertices.size() + sizeof(vec2) * creeper_uvs.size(),
+    glBufferData( GL_ARRAY_BUFFER, vertices_size + uvs_size + normals_size,
 		  NULL, GL_STATIC_DRAW );
-    glBufferSubData( GL_ARRAY_BUFFER, 0, sizeof(vec3) * creeper_vertices.size(), &creeper_vertices[0] );
-    glBufferSubData( GL_ARRAY_BUFFER, sizeof(vec3) * creeper_vertices.size(), sizeof(vec2) * creeper_uvs.size(), &creeper_uvs[0]);
+    glBufferSubData( GL_ARRAY_BUFFER, 0, vertices_size, &creeper_vertices[0] );
+    glBufferSubData( GL_ARRAY_BUFFER, vertices_size, uvs_size, &creeper_uvs[0]);
+    glBufferSubData( GL_ARRAY_BUFFER, vertices_size + uvs_size, normals_size, &creeper_normals[0]);
     
     // Load shaders and use the resulting shader program
     GLuint program = InitShader( "texturevshader.glsl", "texturefshader.glsl" );
     glUseProgram( program );
     
-    GLuint vPosition = glGetAttribLocation( program, "vPosition" );
+    GLuint vPosition = glGetAttribLocation( program, "vPositionModelSpace" );
     glEnableVertexAttribArray( vPosition );
     glVertexAttribPointer( vPosition, 3, GL_FLOAT, GL_FALSE, 0,
 			   BUFFER_OFFSET(0) );
@@ -69,11 +75,19 @@ void my_init( void ) {
     GLuint vTexture = glGetAttribLocation( program, "vTexPosition" );
     glEnableVertexAttribArray( vTexture );
     glVertexAttribPointer( vTexture, 2, GL_FLOAT, GL_FALSE, 0,
-			   BUFFER_OFFSET(sizeof(vec3) * creeper_vertices.size()));
+			   BUFFER_OFFSET(vertices_size));
+
+    GLuint vNormal = glGetAttribLocation( program, "vNormalModelSpace" );
+    glEnableVertexAttribArray(vNormal);
+    glVertexAttribPointer( vNormal, 3, GL_FLOAT, GL_FALSE, 0,
+			   BUFFER_OFFSET(vertices_size + uvs_size));
 
     uniModel = glGetUniformLocation( program, "uniModel" );
     uniView = glGetUniformLocation(program, "uniView");
     uniProjection = glGetUniformLocation( program, "uniProjection" );
+    uniLightPosition = glGetUniformLocation(program, "lightPositionWorldSpace");
+    glUniform3f(uniLightPosition, LIGHT_POSITION[0], LIGHT_POSITION[1], LIGHT_POSITION[2]);
+
 
     GLuint tex;
     glGenTextures(1, &tex);
