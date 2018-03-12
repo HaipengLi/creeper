@@ -19,20 +19,10 @@ GLuint grass_vao, grass_vbo, grass_tex;
 const vec4 BACKGROUND_COLOR = vec4(0.1, 0.1, 0.1, 1.0);
 const vec3 LIGHT_POSITION = vec3(-2, 0, 8);
 
-// int index = 0;
-enum ViewMode {
-    FRONT = 0,
-    TOP = 1,
-    SIDE = 2,
-    NUM_VIEWS = 3
-};
-
 char* GRASS_TEX_FILEPATH = "src/grass_texture.bmp";
 char* GRASS_OBJ_FILEPATH = "src/grass.obj";
 char* CREEPER_TEX_FILEPATH = "src/creeper_texture.bmp";
 char* CREEPER_OBJ_FILEPATH = "src/creeper.obj";
-
-int view_mode = 0;
 
 void deleteBMPData(unsigned char* data);
 unsigned char* loadBMPData(const char *imagepath, unsigned int& width, unsigned int& height);
@@ -161,22 +151,12 @@ void reshape( int width, int height ) {
     glUniformMatrix4fv(uniModel, 1, GL_TRUE, model);
 }
 
-void switch_view() {
-    view_mode++;
-    if(view_mode >= NUM_VIEWS) {
-        view_mode = 0;
-    }
-}
-
 void keyboard( unsigned char key, int current_target_x, int y ) {
     switch( key ) {
 	case 033: // Escape Key
 	case 'q': case 'Q':
 	    exit( EXIT_SUCCESS );
 	    break;
-    case 'c': case 'C':
-        switch_view();
-        break;
     }
 
     glutPostRedisplay();
@@ -189,13 +169,7 @@ void draw_grass() {
 void display() {
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-    if(view_mode == TOP) {
-        view = LookAt(vec4(-2.5, 1, 3, 1), vec4(0, 0, 0, 1), vec4(0, 1, 0, 0));
-    } else if(view_mode == FRONT) {
-        view = LookAt(vec4(-3, 0.6, 3, 1), vec4(0, 0, 0, 1), vec4(0, 1, 0, 0));
-    } else {
-        view = LookAt(vec4(1, 0, 1, 1), vec4(0, 0, 0, 1), vec4(1, 0, 0, 0));
-    }
+    view = LookAt(vec4(-2.5, .5, 2.5, 1), vec4(0, 0, 0, 1), vec4(0, 1, 0, 0));
     glUniformMatrix4fv(uniView, 1, GL_TRUE, view); 
     // use identity matrix as model
     mat4 model;
